@@ -1,0 +1,6 @@
+{
+  "layers_order": ["backgrounds", "base", "cat", "eyes", "nose", "accessories"],
+  "resolution": 1600,
+  "palette": [],
+  "output_dir": "output"
+}
