@@ -106,8 +106,49 @@ def select_asset_equal(rng: random.Random, choices: List[str]) -> str: #choices:
     # Liste doluysa, rastgele bir öğe seç ve döndür
     return rng.choice(choices)
 
-def generate_collection()
+def generate_collection(
+        assets_root: Path, #Ana varlık (assets) klasörünün yolu
+        layers_order: List[str], #hangi katmanların hangi sırayla kullanılacağını belirleyen isim listesi
+        out_dir: Path, #çıktı klasörü
+        num: int, # Üretilmek istenen toplam öğe sayısı
+        start_id: int = 1, #Dosya isimlendirme ve edition numarası için başlangıç id’si
+        resolution: int = 400, #Üretilen görüntülerin piksel cinsinden kare boyutu.
+        seed: int = None, #her çalışmada farklı rastgelelik
+        palette: List[str] = None, #rastgele RGB renkler üretilir
+        max_attempts_per_item: int = 200 #Her öğe için benzersiz bir kombinasyon yakalanana kadar yapılacak deneme sayısı sınırı.
+        # Çakışma (aynı kombinasyonun tekrar üretilmesi) olursa yeniden deniyor; bu parametre sonsuz döngüyü önler.
+):
+    """
+    çıktı klasörünü hazırlar, rastgelelik kaynağını başlatır, varlıkları toplar, olası benzersiz kombinasyon sayısını
+    hesaplar ve kullandığın katmanlarda kaç varlık olduğunu kullanıcıya bildirir.
+    """
+    ensure_dir(out_dir) #out_dir klasörünü oluşturursa oluşturur, varsa hata vermez.
+    rng_global = random.Random(seed)
+    assets_map = gather_assets(assets_root,layers_order)
+    max_possible = compute_max_combinations(assets_map, layers_order)
+    print(f"Detected assets (per layer):")
+    for layer in layers_order:
+        #Her bir layer için assets_map.get(layer, []) uzunluğunu yazdırır; böylece hangi katmanda kaç dosya olduğunu konsolda hızlıca görürsün.
+        print(f" {layer}: {len(assets_map.get(layer, []))}")
+    if assets_map.get("masks"):
+        print(f" masks: {len(assets_map.get('masks'))} (will use masks)")
+    print(f"Max unique combinations (theoretical) : {max_possible}")
 
+    if num + start_id - 1 > max_possible:
+        print(f"WARNING: Requested {num} items but only {max_possible} unique combinations possible. Will generate at most {max_possible - (start_id - 1)} items.")
+
+    # Daha önce üretilen kombinasyonların özet hashlerini saklar.
+    seen_hashes = set()
+    # Her üretilen öğe için oluşturulan metadata sözlüklerini toplar. Sonunda index dosyası olarak kaydedilir.
+    metadata_list = []
+    generated = 0
+    target = num
+    i = start_id
+
+    # toplam ilerleme hedefini belirler.
+    pbar = tqdm(total=min(target, max_possible - (start_id - 1)), desc="Generating")
+
+    # while loopunda kaldım!!!********************************
 
 # ------------------------------------------------ CLI ------------------------------------------------
 # def main():
