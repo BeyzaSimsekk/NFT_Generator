@@ -14,7 +14,7 @@ import random
 import hashlib
 import argparse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 from PIL import Image
 from tqdm import tqdm
@@ -236,6 +236,49 @@ def generate_collection(
             # save image + metadata
             filename = f"nft_{i:06d}.png"
             canvas.save(out_dir / filename)
+
+            # Metadata için özellikleri (attributes) bir listeye ekle
+            attributes = []
+            for k,v in selected.items():
+                if k == "color":
+                    # Renk bilgisi özel bir alan olarak eklenir
+                    attributes.append({"trait_type" : "color", "value": v})
+                else:
+                    # Diğer katmanlar (örneğin: base, eyes, nose) trait olarak eklenir
+                    attributes.append({"trait_type" : k, "value": v})
+
+            metadata = {
+                "name": f"Pixel Cat #{i}",
+                "description": "Programmatically generated Pixel Cat",
+                "image": filename,
+                "edition": i,
+                "attributes": attributes,
+                "hash": combo_hash,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            with open(out_dir / f"nft_{i:06d}.json", "w", encoding="utf-8") as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+            metadata_list.append(metadata)
+            generated += 1
+            i += 1
+            made = True
+            pbar.update(1)
+            break
+
+        if not made:
+            # couldn't find a unique combo for this index after attempts
+            print(f"Could not produce unique item for id={i} after {max_attempts_per_item} attempts. Stopping..")
+            break
+
+    pbar.close()
+
+    # write index
+    with open(out_dir / "metadata_index.json", "w", encoding="utf-8") as f:
+        json.dump(metadata_list, f, ensure_ascii=False, indent=2)
+
+    print(f"Done. Generated {generated} items. Files saved to: {out_dir}")
 
 # ------------------------------------------------ CLI ------------------------------------------------
 # def main():
