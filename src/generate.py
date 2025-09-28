@@ -148,7 +148,104 @@ def generate_collection(
     # toplam ilerleme hedefini belirler.
     pbar = tqdm(total=min(target, max_possible - (start_id - 1)), desc="Generating")
 
-    # while loopunda kaldım!!!********************************
+    # Üretilecek hedefe ulaşılmadıysa ve hâlâ benzersiz kombinasyon üretilebiliyorsa devam et
+    while generated < target and (i - start_id) < max_possible:
+        attempts = 0
+        made = False
+
+        # Bu öğe için benzersiz kombinasyon bulmak üzere denemelere başla
+        while attempts < max_attempts_per_item:
+            attempts += 1
+            # Her deneme için farklı ama kontrollü rastgelelik üret
+            rng = random.Random((seed or 0)^ i ^ attempts)
+            # Seçilen varlıklar ve açılan görselleri tutacak yapılar
+            selected={}
+            images={}
+
+            # choose asset per layer equally (Her katman için eşit olasılıkla bir görsel seç)
+            for layer in layers_order:
+                choices = assets_map.get(layer, []) # Katmana ait görsellerin listesi
+                chosen = select_asset_equal(rng, choices) if choices else None  # Rastgele seçim yap
+                if chosen:
+                    selected[layer] = chosen  # Seçilen dosya adını kaydet
+                    img = Image.open(assets_root / layer / chosen).convert("RGBA") # Görseli aç ve RGBA formatına çevir
+                    if img.size != (resolution, resolution):
+                        img = img.resize((resolution, resolution), Image.NEAREST)
+                    images[layer]=img # Görseli katmanlar sözlüğüne ekle
+
+            #decide mask: prefer explicit masks folder
+            mask = None
+            if assets_map.get("masks"):
+                mask_choice = select_asset_equal(rng, assets_map["masks"])
+                mask = Image.open(assets_root / "masks" / mask_choice).convert("L")
+                if mask.size != (resolution,resolution):
+                    mask = mask.resize((resolution, resolution), Image.NEAREST)
+                selected["mask"] = mask_choice
+            else:
+                # derive mask from base if exists
+                if "base" in images:
+                    mask = image_to_mask(images["base"])
+                else:
+                    mask = Image.new("L", (resolution, resolution), 0)
+
+            # choose color: from palette if provided else random
+            if palette:
+                color_hex = rng.choice(palette)
+                color_rgb = rgb_from_hex(color_hex)
+            else:
+                color_rgb = (rng.randint(0,255), rng.randint(0,255), rng.randint(0,255))
+                color_hex = hex_from_rgb(color_rgb)
+            selected["color"] = color_hex
+
+            # Compose: background -> colored body -> cat outline -> other overlays (in order)
+            # start canvas
+            if "backgrounds" in images:
+                canvas = images["backgrounds"].copy()
+            else:
+                canvas = Image.new("RGBA", (resolution, resolution), (255,255,255,0))
+
+            # colored body layer from mask
+            color_layer = color_layer_from_mask((resolution,resolution), mask, color_rgb)
+            canvas = Image.alpha_composite(canvas,color_layer)
+
+            if "cat" in images:
+                canvas= Image.alpha_composite(canvas,images["cat"])
+
+            # then overlays: after cat in layers_order (outline dan sonra detay katmanları için)
+            after_cat = False
+            for layer in layers_order:
+                if layer == "cat":
+                    after_cat = True
+                    continue
+                if not after_cat:
+                    continue
+                if layer in ("backgrounds","base"):
+                    continue
+                if layer in images:
+                    canvas = Image.alpha_composite(canvas, images[layer])
+
+            # uniqueness hash
+            combo_obj = {"selected": selected}
+            combo_str = json.dumps(combo_obj, sort_keys=True, ensure_ascii=False)
+            combo_hash = hashlib.sha256(combo_str.encode()).hexdigest()
+            if combo_hash in seen_hashes:
+                # collision - try again
+                continue
+            seen_hashes.add(combo_hash)
+
+            # save image + metadata
+            filename = f"nft_{i:06d}.png"
+            canvas.save(out_dir / filename)
 
 # ------------------------------------------------ CLI ------------------------------------------------
 # def main():
+
+
+
+
+
+
+
+
+
+
