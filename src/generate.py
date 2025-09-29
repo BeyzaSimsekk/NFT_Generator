@@ -235,6 +235,7 @@ def generate_collection(
 
             # save image + metadata
             filename = f"nft_{i:06d}.png"
+            print("Saving:", out_dir / filename)
             canvas.save(out_dir / filename)
 
             # Metadata için özellikleri (attributes) bir listeye ekle
