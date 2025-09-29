@@ -8,6 +8,7 @@ Pixel Cat NFT generator — simplified & complete version for your needs.
 - Optional masks/ folder. If absent, mask is derived from base or cat layer.
 """
 
+#*********************************** MASK OLMADANKİ HALİNİ DENE BİR ARA****************************************
 import os
 import json
 import random
