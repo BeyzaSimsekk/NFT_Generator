@@ -281,8 +281,52 @@ def generate_collection(
     print(f"Done. Generated {generated} items. Files saved to: {out_dir}")
 
 # ------------------------------------------------ CLI ------------------------------------------------
-# def main():
+def main():
+    # Komut satırı argümanlarını tanımlamak için bir parser oluştur
+    parser = argparse.ArgumentParser(description="Pixel Cat NFT Generator (equal weights, uniqueness)")
+    parser.add_argument("--assets", type=str, default="assets",help="assets root folder")
+    parser.add_argument("--config", type=str, default="config.json", help="config json path")
+    parser.add_argument("--num", type=int, default=10, help="How many NFTs to generate")
+    parser.add_argument("--start", type=int, default=1, help="start edition number")
+    parser.add_argument("--resolution", type=int, default=None, help="output resolution (overrides config)")
+    parser.add_argument("--seed", type=int, default=None, help="random seed (optional)")
+    # Tüm argümanları parse edip `args` nesnesine aktarır
+    args = parser.parse_args()
+    """
+    Bu yapı sayesinde terminalden şöyle komutlar verebilirsin:
+        `python generate.py --assets my_assets --num 50 --resolution 400 --seed 42`
+    """
 
+    # config dosyasını yükle (yoksa boş sözlük kullan)
+    cfg = load_json(Path(args.config)) if Path(args.config).exists() else {}
+    # Katman sırasını config’ten al, yoksa varsayılan sırayı kullan
+    layers_order = cfg.get("layers_order", ["backgrounds", "base", "cat", "eyes", "nose"])
+    # Config’teki çözünürlüğü al
+    conf_res = cfg.get("resolution", 400)
+    # Komut satırından çözünürlük verildiyse onu kullan, yoksa config’tekini
+    resolution = args.resolution if args.resolution else conf_res
+    palette = cfg.get("palette") if cfg.get("palette") else None
+    # Çıktı klasörünü config’ten al, yoksa "output" klasörünü kullan
+    out_dir = Path(cfg.get("output_dir", "output"))
+
+    # NFT koleksiyonunu üret
+    generate_collection(
+        assets_root=Path(args.assets),
+        layers_order=layers_order,
+        out_dir=out_dir,
+        num=args.num,
+        start_id=args.start,
+        resolution=resolution,
+        seed=args.seed,
+        palette=palette,
+    )
+
+"""KODU AŞAĞIDAKİ GİBİ ÇALIŞTIRMA SEBEBİ:
+    - Kodun hem modül gibi başka projelerde kullanılabilir,
+    - Hem de doğrudan çalıştırılabilir hale gelir.
+"""
+if __name__ == "__main__":
+    main()
 
 
 
